@@ -5,12 +5,20 @@ let build;
 try {
   build = await import("../build/index.js");
 } catch (error) {
-  console.warn("Build not found, using dev mode");
-  // Fallback for development
-  build = { default: {} };
+  console.error("Failed to import build:", error);
+  throw new Error("Build not found. Make sure to run 'npm run build' first.");
 }
 
-export default createRequestHandler({
+const requestHandler = createRequestHandler({
   build: build.default || build,
-  mode: process.env.NODE_ENV,
+  mode: process.env.NODE_ENV === "development" ? "development" : "production",
 });
+
+export default async function handler(req, res) {
+  try {
+    return await requestHandler(req, res);
+  } catch (error) {
+    console.error("Handler error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+}
